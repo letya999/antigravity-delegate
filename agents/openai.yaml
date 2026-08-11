@@ -1,0 +1,4 @@
+interface:
+  display_name: "Antigravity Delegate"
+  short_description: "Delegate tasks to Antigravity (agy) headlessly"
+  default_prompt: "Use $antigravity-delegate to delegate this task to Antigravity headlessly and return the verified result."
