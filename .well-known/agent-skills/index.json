@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "antigravity-delegate",
+      "type": "archive",
+      "description": "Run Antigravity CLI (`agy`) as a headless delegate. Use when the user names Antigravity or agy, says \"ask Antigravity\", wants a Gemini-backed second opinion, or compares coding agents. Do NOT use for interactive sessions, other CLIs, or tasks not meant for delegation.",
+      "url": "https://raw.githubusercontent.com/letya999/antigravity-delegate/dev/dist/antigravity-delegate.zip",
+      "digest": "sha256:bcaf9498ff73672b1c2b99fd6fce5b12ac762f4edbb375c4e6b8814892952c85",
+      "repository": "https://github.com/letya999/antigravity-delegate",
+      "license": "MIT",
+      "publisher": "Artem Letyushev"
+    }
+  ]
+}
