@@ -21,6 +21,7 @@ Read [runtime-setup.md](references/runtime-setup.md) before invoking the wrapper
 
 1. Clarify the delegated objective, scope, and whether Antigravity may edit files or run commands. Do not delegate secrets or expose protected files in the prompt.
 2. Resolve the project directory to an absolute path. Prefer the current working directory. Verify it exists before starting.
+   For disposable-harness experiments, pass its parent home with `--user-home`; the wrapper records and exposes it through `HOME` and `USERPROFILE` without changing `LOCALAPPDATA`.
 3. Run the bundled wrapper with the Python command discovered by [runtime-setup.md](references/runtime-setup.md).
 4. Read [headless-reference.md](references/headless-reference.md) when flags, sessions, timeouts, output parsing, or authentication details are needed.
 
@@ -35,6 +36,7 @@ Read [runtime-setup.md](references/runtime-setup.md) before invoking the wrapper
 - Authentication is handled entirely by Antigravity's preconfigured environment or login. The wrapper never reads credentials or places them in command-line arguments.
 - It writes stdout, stderr, and a small result manifest to a temporary output directory, then prints the manifest as JSON. It surfaces Antigravity's parsed result under `response`, degrading to the raw text when the output is not a single JSON object.
 - It returns nonzero for missing Antigravity, an invalid project directory, timeout, or a failed process. Do not hide these failures.
+- It also returns nonzero for a non-`SUCCESS` JSON status or an empty response, even if the process exit code is zero.
 - Prefer a one-shot invocation. Use `--conversation` or `--continue` only when the user explicitly asks for a resumable Antigravity session.
 
 ## Safety and verification

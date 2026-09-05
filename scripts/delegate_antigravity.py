@@ -14,10 +14,12 @@ import tempfile
 from pathlib import Path
 
 
-def run_bounded(command: list[str], cwd: Path, timeout: float) -> subprocess.CompletedProcess[str]:
+def run_bounded(
+    command: list[str], cwd: Path, timeout: float, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     """Run in a process group so a timeout can terminate the whole CLI tree."""
     group_options = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True})
-    process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", **group_options)
+    process = subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", **group_options)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
@@ -79,6 +81,7 @@ def main() -> int:
     parser.add_argument("--conversation", help="Optional conversation id to resume")
     parser.add_argument("--always-approve", action="store_true", help="Auto-approve tool permissions (--dangerously-skip-permissions)")
     parser.add_argument("--output-dir", help="Directory for captured output")
+    parser.add_argument("--user-home", help="Disposable user home exposed to Antigravity")
     args = parser.parse_args()
 
     cwd = Path(args.cwd).expanduser().resolve()
@@ -103,6 +106,9 @@ def main() -> int:
         parser.error(f"invalid --timeout: {exc}")
     output_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else Path(tempfile.mkdtemp(prefix="antigravity-delegate-"))
     output_dir.mkdir(parents=True, exist_ok=True)
+    user_home = Path(args.user_home).expanduser().resolve() if args.user_home else None
+    if user_home:
+        user_home.mkdir(parents=True, exist_ok=True)
     stdout_path = output_dir / "stdout.json"
     stderr_path = output_dir / "stderr.log"
     manifest_path = output_dir / "result.json"
@@ -118,7 +124,10 @@ def main() -> int:
     command.extend(["-p", args.task])
 
     try:
-        completed = run_bounded(command, cwd, seconds + 30)
+        child_env = os.environ.copy()
+        if user_home:
+            child_env.update({"HOME": str(user_home), "USERPROFILE": str(user_home)})
+        completed = run_bounded(command, cwd, seconds + 30, child_env)
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout or ""
         stderr = exc.stderr or ""
@@ -135,7 +144,7 @@ def main() -> int:
 
     stdout_path.write_text(completed.stdout, encoding="utf-8")
     stderr_path.write_text(completed.stderr, encoding="utf-8")
-    manifest = {"tool": "agy", "cwd": str(cwd), "exit_code": completed.returncode, "output_dir": str(output_dir), "stdout": str(stdout_path), "stderr": str(stderr_path)}
+    manifest = {"tool": "agy", "cwd": str(cwd), "user_home": str(user_home) if user_home else None, "environment_overrides": ["HOME", "USERPROFILE"] if user_home else [], "exit_code": completed.returncode, "output_dir": str(output_dir), "stdout": str(stdout_path), "stderr": str(stderr_path)}
     try:
         payload = json.loads(completed.stdout)
         manifest["response"] = extract_response(payload)
@@ -148,6 +157,10 @@ def main() -> int:
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
+    status = manifest.get("raw", {}).get("status") if isinstance(manifest.get("raw"), dict) else None
+    if completed.returncode == 0 and status not in (None, "SUCCESS"):
+        print(f"error: Antigravity returned status {status}; raw output: {stdout_path}", file=sys.stderr)
+        return 65
     if completed.returncode == 0 and not manifest.get("response"):
         print(f"error: Antigravity produced no response; raw output: {stdout_path}", file=sys.stderr)
         return 65

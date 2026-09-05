@@ -55,6 +55,7 @@ if (-not $env:AGY_BIN -and -not (Get-Command agy -ErrorAction SilentlyContinue))
 
 & $PythonExe @PythonArgs "<skill-dir>\scripts\delegate_antigravity.py" `
   --cwd "<absolute-project-path>" `
+  --user-home "<disposable-user-home>" `
   --task "<delegated task>" `
   --timeout 45m
 ```

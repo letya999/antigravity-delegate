@@ -81,6 +81,17 @@ class TestRunBounded(unittest.TestCase):
 
 
 class TestMainCli(unittest.TestCase):
+    def test_user_home_is_recorded_and_non_success_status_fails(self) -> None:
+        mod = _load_module()
+        payload = json.dumps({"status": "CANCELED", "response": "partial"})
+        completed = subprocess.CompletedProcess([], 0, payload, "")
+        with tempfile.TemporaryDirectory() as output_dir, tempfile.TemporaryDirectory() as user_home, mock.patch.object(mod, "find_agy", return_value=sys.executable), mock.patch.object(mod, "run_bounded", return_value=completed) as run, mock.patch.object(sys, "argv", ["delegate", "--cwd", str(SKILL_ROOT), "--user-home", user_home, "--task", "test", "--output-dir", output_dir]):
+            self.assertEqual(mod.main(), 65)
+            child_env = run.call_args.args[3]
+            self.assertEqual(child_env["USERPROFILE"], str(Path(user_home).resolve()))
+            manifest = json.loads((Path(output_dir) / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["environment_overrides"], ["HOME", "USERPROFILE"])
+
     def test_timeout_writes_manifest(self) -> None:
         mod = _load_module()
         with tempfile.TemporaryDirectory() as output_dir, mock.patch.object(mod, "find_agy", return_value=sys.executable), mock.patch.object(mod, "run_bounded", side_effect=subprocess.TimeoutExpired([], 1, output=b"partial", stderr=b"warning")), mock.patch.object(sys, "argv", ["delegate", "--cwd", str(SKILL_ROOT), "--task", "test", "--output-dir", output_dir]):
