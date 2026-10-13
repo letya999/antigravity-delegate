@@ -1,4 +1,13 @@
 {
   "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
-  "skills": ["antigravity-delegate"]
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Delegates",
+      "description": "Run Antigravity CLI (agy) as a headless delegate.",
+      "skills": [
+        "antigravity-delegate"
+      ]
+    }
+  ]
 }
